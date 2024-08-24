@@ -16,3 +16,6 @@ generate-sso-api:
  	--go-grpc_out=$(CONTRACTS_DIR)/gen/go --go-grpc_opt=paths=source_relative \
  	--plugin=protoc-gen-go=bin/protoc-gen-go \
  	--plugin=protoc-gen-go-grpc=bin/protoc-gen-go-grpc
+
+tidy:
+	go mod tidy
