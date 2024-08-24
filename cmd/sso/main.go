@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/TauAdam/sso/internal/app"
 	"github.com/TauAdam/sso/internal/config"
 	"log/slog"
 	"os"
@@ -12,9 +13,10 @@ func main() {
 	log := prepareLogger(cfg.Env)
 
 	log.Info("starting application", slog.Any("config", cfg))
-	//	TODO run application
 
-	//	TODO run grpc server
+	application := app.New(cfg.GRPC.Port, log, cfg.TokenTTL, cfg.StoragePath)
+
+	application.GRPCServer.MustRun()
 }
 
 const (
