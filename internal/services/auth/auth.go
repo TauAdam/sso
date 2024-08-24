@@ -21,7 +21,11 @@ type Auth struct {
 	appProvider AppProvider
 }
 
-var ErrWrongCredentials = errors.New("wrong credentials")
+var (
+	ErrWrongCredentials = errors.New("wrong credentials")
+	ErrInvalidAppID     = errors.New("invalid app ID")
+	ErrAlreadyExists    = errors.New("user already exists")
+)
 
 // UserStore is the interface for creating new user record.
 type UserStore interface {
@@ -111,6 +115,11 @@ func (a *Auth) RegisterUser(ctx context.Context, email, password string) (int64,
 
 	id, err := a.userStore.StoreUser(ctx, email, hash)
 	if err != nil {
+		if errors.Is(err, storage.ErrUserDuplicate) {
+			log.Warn("user already exists", sl.Err(err))
+			return 0, fmt.Errorf("%s: %w", op, ErrAlreadyExists)
+		}
+
 		log.Error("failed to store user", sl.Err(err))
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
@@ -127,6 +136,10 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 
 	isAdmin, err := a.userRecord.IsAdmin(ctx, userID)
 	if err != nil {
+		if errors.Is(err, storage.ErrAppNotFound) {
+			log.Warn("app not found", sl.Err(err))
+			return false, fmt.Errorf("%s: %w", op, ErrInvalidAppID)
+		}
 		log.Error("failed to check if user is admin", sl.Err(err))
 		return false, fmt.Errorf("%s: %w", op, err)
 	}
