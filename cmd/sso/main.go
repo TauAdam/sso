@@ -5,6 +5,8 @@ import (
 	"github.com/TauAdam/sso/internal/config"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -16,7 +18,22 @@ func main() {
 
 	application := app.New(cfg.GRPC.Port, log, cfg.TokenTTL, cfg.StoragePath)
 
-	application.GRPCServer.MustRun()
+	go application.GRPCServer.MustRun()
+
+	//	 Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	sign := <-quit
+
+	log.Info("shutting down application", slog.String(
+		"signal",
+		sign.String(),
+	))
+
+	application.GRPCServer.Stop()
+
+	log.Info("application stopped")
 }
 
 const (
