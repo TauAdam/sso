@@ -1,8 +1,10 @@
 package migrator
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/golang-migrate/migrate/v4"
 )
 
 func main() {
@@ -28,4 +30,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	if err := m.Up(); err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			fmt.Println("no changes")
+			return
+		}
+		panic(err)
+	}
+
+	fmt.Println("migrations applied")
 }
