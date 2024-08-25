@@ -32,7 +32,7 @@ type UserStore interface {
 	StoreUser(
 		ctx context.Context,
 		email string,
-		passwordHash []byte,
+		hashedPass []byte,
 	) (uid int64, err error)
 }
 
