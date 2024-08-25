@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/TauAdam/sso/internal/entities/models"
 	"github.com/TauAdam/sso/internal/services/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -27,7 +28,7 @@ func New(path string) (*Storage, error) {
 func (s *Storage) StoreUser(ctx context.Context, email string, hashedPass []byte) (int64, error) {
 	const op = "sqlite.SaveUser"
 
-	stmt, err := s.db.Prepare("INSERT INTO users(email, password) VALUES(?, ?)")
+	stmt, err := s.db.Prepare("INSERT INTO users(email, hashed_password) VALUES(?, ?)")
 	if err != nil {
 		return 0, fmt.Errorf("%s: prepare statement: %w", op, err)
 	}
@@ -42,4 +43,50 @@ func (s *Storage) StoreUser(ctx context.Context, email string, hashedPass []byte
 
 		return 0, fmt.Errorf("%s: exec statement: %w", op, err)
 	}
+}
+
+func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
+	const op = "sqlite.User"
+
+	stmt, err := s.db.Prepare("SELECT id, email, hashed_password FROM users WHERE email = ?")
+	if err != nil {
+		return models.User{}, fmt.Errorf("%s: prepare statement: %w", op, err)
+	}
+
+	row := stmt.QueryRowContext(ctx, email)
+
+	var user models.User
+	err = row.Scan(&user.ID, &user.Email, &user.HashedPassword)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.User{}, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+
+		return models.User{}, fmt.Errorf("%s: scan row: %w", op, err)
+	}
+
+	return user, nil
+}
+
+func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+	const op = "sqlite.IsAdmin"
+
+	stmt, err := s.db.Prepare("SELECT is_admin FROM users WHERE id = ?")
+	if err != nil {
+		return false, fmt.Errorf("%s: prepare statement: %w", op, err)
+	}
+
+	row := stmt.QueryRowContext(ctx, userID)
+
+	var res bool
+	err = row.Scan(&res)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("%s: %w", op, storage.ErrAppNotFound)
+		}
+
+		return false, fmt.Errorf("%s: scan row: %w", op, err)
+	}
+
+	return res, nil
 }
