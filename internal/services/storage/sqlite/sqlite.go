@@ -27,7 +27,7 @@ func New(path string) (*Storage, error) {
 }
 
 func (s *Storage) StoreUser(ctx context.Context, email string, hashedPass []byte) (int64, error) {
-	const op = "sqlite.SaveUser"
+	const op = "sqlite.StoreUser"
 
 	stmt, err := s.db.Prepare("INSERT INTO users(email, hashed_password) VALUES(?, ?)")
 	if err != nil {

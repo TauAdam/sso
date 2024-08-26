@@ -1,4 +1,4 @@
-package suite
+package kit
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"testing"
 )
 
-type Suite struct {
+type Kit struct {
 	*testing.T
 	Config     *config.Config
 	AuthClient authv1.AuthClient
 }
 
-func New(t *testing.T) (context.Context, *Suite) {
+func New(t *testing.T) (context.Context, *Kit) {
 	t.Helper()
 	t.Parallel()
 
-	cfg := config.MustLoadConfigByPath("../config/tests.yaml")
+	cfg := config.MustLoadConfigByPath("../config/local.yml")
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GRPC.Timeout)
 
@@ -38,7 +38,7 @@ func New(t *testing.T) (context.Context, *Suite) {
 		t.Fatalf("failed to dial: %v", err)
 	}
 
-	return ctx, &Suite{
+	return ctx, &Kit{
 		T:          t,
 		Config:     cfg,
 		AuthClient: authv1.NewAuthClient(conn),
