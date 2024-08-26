@@ -19,23 +19,13 @@ type GPRCConfig struct {
 	Timeout time.Duration `yaml:"timeout"`
 }
 
-func MustLoadConfig() Config {
+func MustLoadConfig() *Config {
 	configPath := parseConfigPath()
 	if configPath == "" {
 		panic("config path is empty")
 	}
 
-	if _, err := os.Stat(configPath); err != nil {
-		panic("config file not found" + configPath)
-	}
-
-	var cfg Config
-
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		panic("config file read error: " + err.Error())
-	}
-
-	return cfg
+	return MustLoadConfigByPath(configPath)
 }
 
 func parseConfigPath() string {
@@ -49,4 +39,18 @@ func parseConfigPath() string {
 	}
 
 	return result
+}
+
+func MustLoadConfigByPath(configPath string) *Config {
+	if _, err := os.Stat(configPath); err != nil {
+		panic("config file not found" + configPath)
+	}
+
+	var cfg Config
+
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		panic("config file read error: " + err.Error())
+	}
+
+	return &cfg
 }

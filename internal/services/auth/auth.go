@@ -45,7 +45,13 @@ type AppProvider interface {
 	App(ctx context.Context, appID int64) (models.App, error)
 }
 
-func New(log *slog.Logger, tokenTTL time.Duration, userStore UserStore, userRecord UserRecord, appProvider AppProvider) *Auth {
+func New(
+	log *slog.Logger,
+	tokenTTL time.Duration,
+	userStore UserStore,
+	userRecord UserRecord,
+	appProvider AppProvider,
+) *Auth {
 	return &Auth{
 		log:         log,
 		tokenTTL:    tokenTTL,

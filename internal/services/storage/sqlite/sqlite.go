@@ -38,7 +38,10 @@ func (s *Storage) StoreUser(ctx context.Context, email string, hashedPass []byte
 	if err != nil {
 		var sqliteErr sqlite3.Error
 
-		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
+		if errors.As(err, &sqliteErr) && errors.Is(
+			sqliteErr.ExtendedCode,
+			sqlite3.ErrConstraintUnique,
+		) {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrUserDuplicate)
 		}
 

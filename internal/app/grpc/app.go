@@ -39,7 +39,10 @@ func (a *Application) Start() error {
 		return fmt.Errorf("failed to listen %s: %w", op, err)
 	}
 
-	log.Info("grpc server started", slog.String("address", fmt.Sprintf(":%s", listener.Addr().String())))
+	log.Info("grpc server started", slog.String(
+		"address",
+		fmt.Sprintf(":%s", listener.Addr().String()),
+	))
 
 	if err := a.gRPCServer.Serve(listener); err != nil {
 		return fmt.Errorf("failed to serve %s: %w", op, err)
