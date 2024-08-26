@@ -5,7 +5,6 @@ import (
 	"errors"
 	authv1 "github.com/TauAdam/sso/contracts/gen/go/sso"
 	"github.com/TauAdam/sso/internal/services/auth"
-	"github.com/TauAdam/sso/internal/services/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -63,7 +62,7 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 
 	userID, err := s.auth.RegisterUser(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		if errors.Is(err, storage.ErrUserDuplicate) {
+		if errors.Is(err, auth.ErrAlreadyExists) {
 			return nil, status.Error(codes.AlreadyExists, "user already exists")
 		}
 		return nil, status.Error(codes.Internal, err.Error())
@@ -82,7 +81,7 @@ func (s *Server) IsAdmin(ctx context.Context, req *authv1.IsAdminRequest) (*auth
 
 	isAdmin, err := s.auth.IsAdmin(ctx, req.GetUserId())
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, auth.ErrUserNotFound) {
 			return nil, status.Error(codes.NotFound, "user not found")
 		}
 

@@ -25,6 +25,7 @@ var (
 	ErrWrongCredentials = errors.New("wrong credentials")
 	ErrInvalidAppID     = errors.New("invalid app ID")
 	ErrAlreadyExists    = errors.New("user already exists")
+	ErrUserNotFound     = errors.New("user not found")
 )
 
 // UserStore is the interface for creating new user record.

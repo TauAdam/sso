@@ -140,3 +140,108 @@ func TestLoginAfterRegistration(t *testing.T) {
 	expectedTimestamp := loginTimestamp.Add(suite.Config.TokenTTL).Unix()
 	assert.InDelta(t, expectedTimestamp, claims["exp"].(float64), 1)
 }
+
+func TestFailedRegistration(t *testing.T) {
+	ctx, suite := kit.New(t)
+
+	tests := []struct {
+		name          string
+		email         string
+		password      string
+		expectedError string
+	}{{
+		name:          "empty email",
+		email:         "",
+		password:      gofakeit.Password(true, true, true, true, false, passwordLength),
+		expectedError: "email is required",
+	},
+		{
+			name:          "empty password",
+			email:         gofakeit.Email(),
+			password:      "",
+			expectedError: "password is required",
+		},
+		{
+			name:          "empty email and password",
+			email:         "",
+			password:      "",
+			expectedError: "email is required",
+		}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registerResp, err := suite.AuthClient.Register(ctx, &authv1.RegisterRequest{
+				Email:    tt.email,
+				Password: tt.password,
+			})
+
+			require.Error(t, err)
+			assert.Empty(t, registerResp.GetUserId())
+			assert.ErrorContains(t, err, tt.expectedError)
+		})
+	}
+}
+
+func TestFailedLogin(t *testing.T) {
+	ctx, suite := kit.New(t)
+
+	tests := []struct {
+		name          string
+		email         string
+		password      string
+		appID         int32
+		expectedError string
+	}{{
+		name:          "empty email",
+		email:         "",
+		password:      gofakeit.Password(true, true, true, true, false, passwordLength),
+		appID:         appID,
+		expectedError: "email is required",
+	},
+		{
+			name:          "empty password",
+			email:         gofakeit.Email(),
+			password:      "",
+			appID:         appID,
+			expectedError: "password is required",
+		},
+		{
+			name:          "empty email and password",
+			email:         "",
+			password:      "",
+			appID:         appID,
+			expectedError: "email is required",
+		}, {
+			name:          "empty app id",
+			email:         gofakeit.Email(),
+			password:      gofakeit.Password(true, true, true, true, false, passwordLength),
+			appID:         0,
+			expectedError: "app_id is required",
+		}, {
+			name:          "wrong credentials",
+			email:         gofakeit.Email(),
+			password:      gofakeit.Password(true, true, true, true, false, passwordLength),
+			appID:         appID,
+			expectedError: "wrong email or password",
+		}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registerResp, err := suite.AuthClient.Register(ctx, &authv1.RegisterRequest{
+				Email:    gofakeit.Email(),
+				Password: gofakeit.Password(true, true, true, true, false, passwordLength),
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, registerResp.GetUserId())
+
+			loginResp, err := suite.AuthClient.Login(ctx, &authv1.LoginRequest{
+				Email:    tt.email,
+				Password: tt.password,
+				AppId:    tt.appID,
+			})
+			require.Error(t, err)
+			assert.Empty(t, loginResp.GetToken())
+			assert.ErrorContains(t, err, tt.expectedError)
+		})
+	}
+}
