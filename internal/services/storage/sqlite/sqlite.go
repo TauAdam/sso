@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/TauAdam/sso/internal/entities/models"
 	"github.com/TauAdam/sso/internal/services/storage"
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -37,12 +38,19 @@ func (s *Storage) StoreUser(ctx context.Context, email string, hashedPass []byte
 	if err != nil {
 		var sqliteErr sqlite3.Error
 
-		if errors.As(err, &sqliteErr) && sqliteErr.Extended == sqlite3.ErrConstraintUnique {
+		if errors.As(err, &sqliteErr) && errors.Is(sqliteErr.ExtendedCode, sqlite3.ErrConstraintUnique) {
 			return 0, fmt.Errorf("%s: %w", op, storage.ErrUserDuplicate)
 		}
 
 		return 0, fmt.Errorf("%s: exec statement: %w", op, err)
 	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
 }
 
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
