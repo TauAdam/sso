@@ -1,0 +1,15 @@
+[Unit]
+Description=gRPC Auth SSO Service
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/home/testosteron/pub/grpc-sso
+ExecStart=/home/testosteron/pub/grpc-sso/app-bin --config=/home/testosteron/pub/grpc-sso/config/prod.yaml
+Restart=always
+RestartSec=4
+StandardOutput=inherit
+
+
+[Install]
+WantedBy=multi-user.target
