@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HOST: testosteron@37.27.51.34
-      APP_DIRECTORY: /home/testosteron/pub/grpc-sso
+      APP_DIRECTORY: ~/pub/grpc-sso
+      SYSTEMD_DIRECTORY: ~/.config/systemd/user/
 
     steps:
       - name: Checkout repository
@@ -61,12 +62,22 @@ jobs:
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "rm -f /etc/systemd/system/grpc-sso.service"
       - name: Copy systemd service file
         run: |
-          scp -i ssh_key.pem -o StrictHostKeyChecking=no ${{ github.workspace }}/config/grpc-sso.service ${{ env.HOST }}:/tmp/grpc-sso.service
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mv /tmp/grpc-sso.service /etc/systemd/system/grpc-sso.service"
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no ${{ github.workspace }}/config/grpc-sso.service ${{ env.HOST }}:${{ env.SYSTEMD_DIRECTORY }}/grpc-sso.service
       - name: Apply migrations
         run: |
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}/migrations"
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --storage-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations"
+
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
+          
+          tar cvf migrations.tar ./migrations
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no migrations.tar ${{ env.HOST }}:/tmp/migrations.tar
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/migrations.tar -C ${{ env.APP_DIRECTORY }}/migrations"
+          
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
+          
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations/"
+          
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
       - name: Start application
         run: |
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl daemon-reload && systemctl restart grpc-sso.service"
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl --user daemon-reload && systemctl --user enable grpc-sso.service && systemctl --user start grpc-sso.service"
