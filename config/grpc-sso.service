@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=root
 WorkingDirectory=/home/testosteron/pub/grpc-sso
-ExecStart=/home/testosteron/pub/grpc-sso/app-bin --config=/home/testosteron/pub/grpc-sso/config/prod.yaml
+ExecStart=/home/testosteron/pub/grpc-sso/app-bin --config=/home/testosteron/pub/grpc-sso/config/production.yaml
 Restart=always
 RestartSec=4
 StandardOutput=inherit

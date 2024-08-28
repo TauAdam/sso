@@ -1,0 +1,62 @@
+name: Deploy application
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to deploy'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: testosteron@37.27.51.34
+      APP_DIRECTORY: /home/testosteron/pub/grpc-sso
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+      - name: Check if tag exists
+        run: |
+          git fetch --all --tags
+          if ! git tag | grep -q "^${{ github.event.inputs.tag }}$"; then
+            echo "error: Tag '${{ github.event.inputs.tag }}' not found"
+            exit 1
+          fi
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22.6
+      - name: Build main application
+        run: |
+          go mod download
+          go build -o app-bin ./cmd/sso
+      - name: Build migrator tool
+        run: |
+          go build -o migrator ./cmd/migrator
+      - name: Upload application to server
+        run: |
+          sudo apt-get install -y ssh rsync
+          echo "$DEPLOY_SSH_KEY" > ssh_key.pem
+          chmod 600 ssh_key.pem
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}"
+          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ env.HOST }}:${{ env.APP_DIRECTORY }}
+          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' ./migrator ${{ env.HOST }}:${{ env.APP_DIRECTORY }}/migrator
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Remove deprecated systemd service file
+        run: |
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "rm -f /etc/systemd/system/grpc-sso.service"
+      - name: Copy systemd service file
+        run: |
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no ${{ github.workspace }}/config/grpc-sso.service ${{ env.HOST }}:/tmp/grpc-sso.service
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mv /tmp/grpc-sso.service /etc/systemd/system/grpc-sso.service"
+      - name: Apply migrations
+        run: |
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --storage-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations"
+      - name: Start application
+        run: |
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl daemon-reload && systemctl restart grpc-sso.service"
