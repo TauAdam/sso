@@ -66,18 +66,15 @@ jobs:
       - name: Apply migrations
         run: |
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}/migrations"
-
+          
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
           
           tar cvf migrations.tar ./migrations
           scp -i ssh_key.pem -o StrictHostKeyChecking=no migrations.tar ${{ env.HOST }}:/tmp/migrations.tar
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/migrations.tar -C ${{ env.APP_DIRECTORY }}/migrations"
           
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
-          
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations/"
-          
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "ls -la ${{ env.APP_DIRECTORY }}/migrations"
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=sso.db --migrations-path=migrations"
+
       - name: Start application
         run: |
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl --user daemon-reload && systemctl --user enable grpc-sso.service && systemctl --user start grpc-sso.service"
