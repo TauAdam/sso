@@ -43,8 +43,13 @@ jobs:
           echo "$DEPLOY_SSH_KEY" > ssh_key.pem
           chmod 600 ssh_key.pem
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}"
-          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ env.HOST }}:${{ env.APP_DIRECTORY }}
-          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' ./migrator ${{ env.HOST }}:${{ env.APP_DIRECTORY }}/migrator
+          
+          tar cvfz sources.tar.gz --exclude='.git' .
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no sources.tar.gz ${{ env.HOST }}:/tmp/sources.tar.gz
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvfz /tmp/sources.tar.gz -C ${{ env.APP_DIRECTORY }}"
+
+#          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ env.HOST }}:${{ env.APP_DIRECTORY }}
+#          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' ./migrator ${{ env.HOST }}:${{ env.APP_DIRECTORY }}/migrator
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
       - name: Remove deprecated systemd service file
