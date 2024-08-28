@@ -39,15 +39,19 @@ jobs:
           go build -o migrator ./cmd/migrator
       - name: Archive application and migrator
         run: |
-          tar cvfz sources.tar.gz --exclude='.git' .
+          tar cvf app.tar app-bin
+          tar cvf migrator.tar migrator
       - name: Upload application to server
         run: |
           sudo apt-get install -y ssh
           echo "$DEPLOY_SSH_KEY" > ssh_key.pem
           chmod 600 ssh_key.pem
-          scp -i ssh_key.pem -o StrictHostKeyChecking=no sources.tar.gz ${{ env.HOST }}:/tmp/sources.tar.gz
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }} && tar xvfz /tmp/sources.tar.gz -C ${{ env.APP_DIRECTORY }}"
 
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no app.tar ${{ env.HOST }}:/tmp/app.tar
+          scp -i ssh_key.pem -o StrictHostKeyChecking=no migrator.tar ${{ env.HOST }}:/tmp/migrator.tar
+          
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/app.tar -C ${{ env.APP_DIRECTORY }}"
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/migrator.tar -C ${{ env.APP_DIRECTORY }}"
         #          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' --exclude='.git' ./ ${{ env.HOST }}:${{ env.APP_DIRECTORY }}
         #          rsync -avz -e 'ssh -i ssh_key.pem -o StrictHostKeyChecking=no' ./migrator ${{ env.HOST }}:${{ env.APP_DIRECTORY }}/migrator
         env:
@@ -61,6 +65,7 @@ jobs:
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mv /tmp/grpc-sso.service /etc/systemd/system/grpc-sso.service"
       - name: Apply migrations
         run: |
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}/migrations"
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --storage-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations"
       - name: Start application
         run: |
