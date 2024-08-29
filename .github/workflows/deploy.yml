@@ -53,9 +53,8 @@ jobs:
           
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}"
           
-          export CROC_SECRET="${{ env.CROC_CODE_PHRASE }}"
-          croc send app-bin migrator config migrations .gitignore Makefile
-          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "croc --classic --overwrite ${{env.CROC_CODE_PHRASE}} ${{ env.APP_DIRECTORY }}"
+          # export CROC_SECRET="${{ env.CROC_CODE_PHRASE }}"
+          CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc send app-bin migrator config migrations .gitignore Makefile & ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "cd ${{ env.APP_DIRECTORY }} && CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc --yes --overwrite"
         #          scp -i ssh_key.pem -o StrictHostKeyChecking=no app.tar ${{ env.HOST }}:/tmp/app.tar
         #          scp -i ssh_key.pem -o StrictHostKeyChecking=no migrator.tar ${{ env.HOST }}:/tmp/migrator.tar
         #
@@ -70,7 +69,7 @@ jobs:
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "rm -f ${{ env.SYSTEMD_DIRECTORY }}/grpc-sso.service"
       - name: Copy systemd service file
         run: |
-          scp -i ssh_key.pem -o StrictHostKeyChecking=no ${{ github.workspace }}/config/grpc-sso.service ${{ env.HOST }}:${{ env.SYSTEMD_DIRECTORY }}/grpc-sso.service
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mv ${{ env.APP_DIRECTORY }}/config/grpc-sso.service ${{ env.SYSTEMD_DIRECTORY }}/grpc-sso.service"
       - name: Apply migrations
         run: |
           # ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}/migrations"
@@ -79,8 +78,7 @@ jobs:
           # scp -i ssh_key.pem -o StrictHostKeyChecking=no migrations.tar ${{ env.HOST }}:/tmp/migrations.tar
           # ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/migrations.tar -C ${{ env.APP_DIRECTORY }}/migrations"
           
-               ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=sso.db --migrations-path=migrations"
-
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=sso.db --migrations-path=migrations"
       - name: Start application
         run: |
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl --user daemon-reload && systemctl --user enable grpc-sso.service && systemctl --user start grpc-sso.service"
