@@ -14,6 +14,7 @@ jobs:
       HOST: testosteron@37.27.51.34
       APP_DIRECTORY: ~/pub/grpc-sso
       SYSTEMD_DIRECTORY: ~/.config/systemd/user/
+      DATABASE_PATH: ~/pub/grpc-sso/sso.db
 
     steps:
       - name: Checkout repository
@@ -54,7 +55,7 @@ jobs:
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "mkdir -p ${{ env.APP_DIRECTORY }}"
           
           # export CROC_SECRET="${{ env.CROC_CODE_PHRASE }}"
-          CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc send app-bin migrator config migrations .gitignore Makefile & ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "cd ${{ env.APP_DIRECTORY }} && CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc --yes --overwrite"
+          CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc send app-bin migrator config migrations .gitignore Makefile & ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "cd ${{ env.APP_DIRECTORY }} && CROC_SECRET="${{env.CROC_CODE_PHRASE}}" croc --yes --overwrite"
         #          scp -i ssh_key.pem -o StrictHostKeyChecking=no app.tar ${{ env.HOST }}:/tmp/app.tar
         #          scp -i ssh_key.pem -o StrictHostKeyChecking=no migrator.tar ${{ env.HOST }}:/tmp/migrator.tar
         #
@@ -78,7 +79,7 @@ jobs:
           # scp -i ssh_key.pem -o StrictHostKeyChecking=no migrations.tar ${{ env.HOST }}:/tmp/migrations.tar
           # ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "tar xvf /tmp/migrations.tar -C ${{ env.APP_DIRECTORY }}/migrations"
           
-          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=sso.db --migrations-path=migrations"
+          ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.APP_DIRECTORY }}/migrator --database-path=${{ env.APP_DIRECTORY }}/sso.db --migrations-path=${{ env.APP_DIRECTORY }}/migrations/"
       - name: Start application
         run: |
           ssh -i ssh_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "systemctl --user daemon-reload && systemctl --user enable grpc-sso.service && systemctl --user start grpc-sso.service"
