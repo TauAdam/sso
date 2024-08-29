@@ -19,3 +19,6 @@ generate-sso-api:
 
 tidy:
 	go mod tidy
+
+migrations-up:
+	go run ./cmd/migrator/ --database-path=./sso.db --migrations-path=./migrations

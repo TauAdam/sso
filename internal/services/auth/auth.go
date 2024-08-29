@@ -44,6 +44,7 @@ type UserRecord interface {
 
 type AppProvider interface {
 	App(ctx context.Context, appID int64) (models.App, error)
+	AddApp(ctx context.Context, name, secretStr string) (appID int32, err error)
 }
 
 func New(
@@ -154,4 +155,22 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	log.Info("user is admin", slog.Bool("isAdmin", isAdmin))
 
 	return isAdmin, nil
+}
+
+func (a *Auth) CreateApp(ctx context.Context, name, secretStr string) (appID int32, err error) {
+	const op = "auth.CreateApp"
+
+	log := a.log.With(slog.String("op", op), slog.String("name", name))
+
+	log.Info("creating app")
+
+	appID, err = a.appProvider.AddApp(ctx, name, secretStr)
+	if err != nil {
+		log.Error("failed to create app", sl.Err(err))
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("app created", slog.Int("appID", int(appID)))
+
+	return appID, nil
 }

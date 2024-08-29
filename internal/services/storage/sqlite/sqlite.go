@@ -124,3 +124,33 @@ func (s *Storage) App(ctx context.Context, appID int64) (models.App, error) {
 
 	return app, nil
 }
+
+func (s *Storage) AddApp(ctx context.Context, name, secretStr string) (appID int32, err error) {
+	const op = "sqlite.AddApp"
+
+	stmt, err := s.db.Prepare("INSERT INTO apps (name, secret) VALUES (?, ?) ON CONFLICT DO NOTHING")
+	if err != nil {
+		return 0, fmt.Errorf("%s: prepare statement: %w", op, err)
+	}
+
+	result, err := stmt.ExecContext(ctx, name, secretStr)
+	if err != nil {
+		var sqliteErr sqlite3.Error
+
+		if errors.As(err, &sqliteErr) && errors.Is(
+			sqliteErr.ExtendedCode,
+			sqlite3.ErrConstraintUnique,
+		) {
+			return 0, fmt.Errorf("%s: %w", op, storage.ErrAppDuplicate)
+		}
+
+		return 0, fmt.Errorf("%s: exec statement: %w", op, err)
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return int32(id), nil
+}

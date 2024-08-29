@@ -23,6 +23,7 @@ type Auth interface {
 		password string,
 	) (userID int64, err error)
 	IsAdmin(ctx context.Context, userID int64) (isAdmin bool, err error)
+	CreateApp(ctx context.Context, name, secretStr string) (appID int32, err error)
 }
 
 type Server struct {
@@ -91,6 +92,31 @@ func (s *Server) IsAdmin(ctx context.Context, req *authv1.IsAdminRequest) (*auth
 	return &authv1.IsAdminResponse{
 		IsAdmin: isAdmin,
 	}, nil
+}
+
+func (s *Server) CreateApp(ctx context.Context, req *authv1.CreateAppRequest) (*authv1.CreateAppResponse, error) {
+	err := validateCreateApp(req)
+	if err != nil {
+		return nil, err
+	}
+	appId, err := s.auth.CreateApp(ctx, req.GetName(), req.GetSecret())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &authv1.CreateAppResponse{
+		AppId: appId,
+	}, nil
+}
+
+func validateCreateApp(req *authv1.CreateAppRequest) error {
+	if req.GetName() == "" {
+		return status.Error(codes.InvalidArgument, "name is required")
+	}
+	if req.GetSecret() == "" {
+		return status.Error(codes.InvalidArgument, "secret is required")
+	}
+	return nil
 }
 
 func validateLogin(req *authv1.LoginRequest) error {
