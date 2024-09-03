@@ -22,3 +22,10 @@ tidy:
 
 migrations-up:
 	go run ./cmd/migrator/ --database-path=./sso.db --migrations-path=./migrations
+
+run:
+	 go run cmd/sso/main.go --config=./config/local.yml
+
+func-tests:
+	go run ./cmd/migrator/ --database-path=./sso.db --migrations-path=./tests/migrations --migrations-table=tests_migrations
+	go test -v ./tests/...
